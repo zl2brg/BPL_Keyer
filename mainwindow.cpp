@@ -26,23 +26,44 @@ MainWindow::~MainWindow()
 
 void MainWindow::setup()
 {
-   morse_string << ".-"<< "-..."<< "-.-."<< "-.."<< "."<< "..-."<< "--." << "...."<< ".."<< ".---"<< "-.-"<< ".-.."<< "--" <<"-."<< "---" <<".--."<< "--.-"<< ".-."<< "..." <<"-"<< "..-"<< "...-"<< ".--"<< "-..-"<< "-.--"<< "--.."<< ".----"<< "..---"<< "...--"<< "....-"<< "....."<< "-...."<< "--..."<< "---.."<< "----." << "-----" << " ";
-   char_string  <<"A"<< "B"<< "C"<< "D"<< "E"<< "F"<< "G"<< "H"<< "I"<< "J"<< "K"<< "L"<< "M"<< "N"<< "O"<< "P"<< "Q"<< "R"<< "S"<< "T"<< "U"<< "V"<< "W"<< "X"<< "Y"<< "Z"<< "1"<< "2"<< "3"<< "4"<< "5"<< "6"<< "7"<< "8"<< "9" << "0" << " ";
+   morse_string << ".-"<< "-..."<< "-.-."<< "-.."<< "."<< "..-."<< "--." << "...."<< ".."<< ".---"<< "-.-"<< ".-.."<< "--" <<"-."<< "---" <<".--."<< "--.-"<< ".-."<< "..." <<"-"<< "..-"<< "...-"<< ".--"<< "-..-"<< "-.--"<< "--.."<< ".----"<< "..---"<< "...--"<< "....-"<< "....."<< "-...."<< "--..."<< "---.."<< "----." << "-----" << " " ;
+   char_string  <<"A"<< "B"<< "C"<< "D"<< "E"<< "F"<< "G"<< "H"<< "I"<< "J"<< "K"<< "L"<< "M"<< "N"<< "O"<< "P"<< "Q"<< "R"<< "S"<< "T"<< "U"<< "V"<< "W"<< "X"<< "Y"<< "Z"<< "1"<< "2"<< "3"<< "4"<< "5"<< "6"<< "7"<< "8"<< "9" << "0" << " " ;
    readFile("/home/simon/keyer.bin");
 }
 
 void MainWindow::update(void){
     morse_msg_ch1="";
     displayBinData();
-    processdData();
+    processBinaryData();
 }
+
 
 void MainWindow::doUpdate(void){
 QByteArray temp;
-temp = this->encodeString("ZL2BRG",0x03);
-displayBinData(&temp);
-binaryData = temp;
-processdData();
+
+epromData.clear();
+epromData.fill(0x00,4096);
+
+temp = this->encodeString(ui->channel1_output->toPlainText(),0x03);
+insertBinaryData(temp,0x03);
+temp = this->encodeString(ui->channel2_output->toPlainText(),0x0c);
+insertBinaryData(temp,0x0c);
+displayBinData(&epromData);
+processBinaryData();
+
+}
+
+
+void MainWindow::insertBinaryData(QByteArray temp, unsigned char channel){
+    int count;
+
+    for (count =0;count < temp.size();count++)
+    {
+        unsigned char val =  epromData[count];
+        val &=~ channel;
+        val |= (temp[count] & channel);
+        epromData[count] = val;
+    }
 
 }
 
@@ -54,25 +75,7 @@ QString MainWindow::getChar(QString morse_char){
         return char_string[index];
     }
     else qDebug() << "Unknown morse char" << morse_char;
-
-        return "";
-}
-
-/* converts eprom byte stream to morse mark-space*/
-QString MainWindow::get_unitlen(QString c){
-    static QString result;
-    static QString morse_msg;
-    QString tmp_char;
-    qDebug() << "decoding Morse packet" << c;
-    if (c == "111")
-    {
-        tmp_char+="-";
-    }
-    else if (c =="1")
-    {
-        tmp_char+= ".";
-    }
-    return tmp_char;
+     return "";
 }
 
 QString  MainWindow::decodeByte(unsigned char byte, unsigned char bit)
@@ -80,26 +83,40 @@ QString  MainWindow::decodeByte(unsigned char byte, unsigned char bit)
     static QString tmp;
     static QString morse_char;
     static int space_count;
-    QString morse_packet;
-        qDebug() << "Decode" <<  byte << bit;
-        if (byte & bit){
-        tmp+="1";
-        return 0;
-        }
+    QString morse_packet="";
+    static bool endofchar = false;
 
+        if (byte & bit){
+            endofchar=false;
+            tmp+="1";
+            return "";
+        }
         /* got a 0 ==space so lets check what we have got */
         space_count++;
         if (tmp.length() > 0)
         {
-            morse_char+=get_unitlen(tmp);
+            if (tmp == "111") {
+                morse_char+="-";
+            }
+            else if (tmp =="1"){
+                morse_char+= ".";
+            }
             tmp="";
-            return 0;
+            return "";
         }
+
         else {
         if (space_count >= 3){
+        if (morse_char.length() > 0)  morse_packet+=getChar(morse_char);
+        if (tmp.length() == 0)
+        {
+            qDebug() << "got space" << morse_packet;
+            if (endofchar){
+                morse_packet+=" "; // 3 null bytes following a character is a space
+            }
+            endofchar=true;
+        }
             tmp="";
-            morse_packet+=getChar(morse_char);
-            morse_packet+=" "; // insert space in output
             morse_char="";
             space_count=0;
         }
@@ -108,16 +125,19 @@ QString  MainWindow::decodeByte(unsigned char byte, unsigned char bit)
 }
 
 
-void MainWindow::processdData(){
+void MainWindow::processBinaryData(){
     int x;
     morse_msg_ch1.clear();
     morse_msg_ch2.clear();
-    for (x = 0; x < binaryData.size(); x++ ){
-        morse_msg_ch1+=decodeByte(binaryData[x],0x01);
+    ui->channel1_output->clear();
+    ui->channel2_output->clear();
+
+    for (x = 0; x < epromData.size(); x++ ){
+        morse_msg_ch1+=decodeByte(epromData[x],0x01);
     }
 
-    for (x = 0; x < binaryData.size(); x++ ){
-        morse_msg_ch2+=decodeByte(binaryData[x],0x04);
+    for (x = 0; x < epromData.size(); x++ ){
+        morse_msg_ch2+=decodeByte(epromData[x],0x04);
     }
 
      ui->channel1_output->appendPlainText(morse_msg_ch1);
@@ -147,7 +167,7 @@ void MainWindow::readFile(QString fileName)
             return;
         }
 
-        binaryData=file.readAll();
+        epromData=file.readAll();
         file.close();
         update();
 
@@ -170,11 +190,15 @@ void MainWindow::displayBinData()
     int x;
     QString a;
     ui->binary_text->clear();
-    for (x = 0; x < binaryData.size(); x++ ){
-     a += QString::asprintf("%02X ",(unsigned int)binaryData[x]);
+    for (x = 0; x < epromData.size(); x++ ){
+     a += QString::asprintf("%02X ",(unsigned int)epromData[x]);
     }
         ui->binary_text->appendPlainText(a);
 }
+
+
+
+
 
 /* Converts alphanumeric char to morse encoded string */
 QByteArray MainWindow::encodeString(QString input, unsigned char bits){
@@ -191,6 +215,7 @@ for (int len=0; len < input.length();len++)
     {
         int index = char_string.indexOf(input.at(len).toUpper());
         morse_char = morse_string[index];
+
         qDebug() << "encode" << input.at(len).toUpper();
     }
     else{
@@ -204,13 +229,13 @@ for (int len=0; len < input.length();len++)
         bool ok;
         temp = encoded_morse.at(len);
         unsigned char b = temp.toUInt(&ok,16);
+
         qDebug() << "b" << b << temp;
         output.append(b);
 
     }
     output.append(3,0);
   }
-
  return output;
 }
 
@@ -218,9 +243,11 @@ for (int len=0; len < input.length();len++)
 QString MainWindow::encodeMorse(QString c, unsigned char bits ){
     QString tmp_char="";
     int x = 0;
+
     qDebug() << "endecoding Morse packet" << c;
     while (x < c.length())
     {
+
         if (c.at(x) == "-")
         {
             tmp_char+="FFF0";
@@ -228,7 +255,7 @@ QString MainWindow::encodeMorse(QString c, unsigned char bits ){
         else if (c.at(x)=='.'){
             tmp_char+="F0";
         }
-         x++;
+        x++;
        }
         return tmp_char;
 

@@ -33,16 +33,17 @@ private:
     void displayBinData(QByteArray *data );
     void displayBinData();
     void setup();
-    QString get_unitlen (QString c);
+    void insertBinaryData(QByteArray temp,unsigned char channel);
+
     QString encodeMorse(QString c, unsigned char bits);
 
     QString decodeByte(unsigned char byte, unsigned char bits);
     QByteArray encodeString(QString c,unsigned char bits);
-    void processdData();
+    void processBinaryData();
     QString getChar(QString morse_char);
     QString fileName;
     Ui::MainWindow *ui;
-    QByteArray binaryData;
+    QByteArray epromData;
     QByteArray out_binaryData;
 
     QStringList morse_string;
