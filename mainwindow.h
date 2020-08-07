@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include<QFile>
 
+#define EPROM_SIZE 4096
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

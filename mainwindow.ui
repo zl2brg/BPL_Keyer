@@ -150,40 +150,7 @@
   </action>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>actionLoad</sender>
-   <signal>triggered()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>loadFile()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>262</x>
-     <y>301</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionSave</sender>
-   <signal>changed()</signal>
-   <receiver>MainWindow</receiver>
-   <slot>saveFile()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>262</x>
-     <y>301</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>openFile()</slot>
   <slot>saveFile()</slot>
