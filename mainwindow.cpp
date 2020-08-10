@@ -26,16 +26,21 @@ MainWindow::~MainWindow()
 
 void MainWindow::setup()
 {
+   tmp ="";
+   morse_char ="";
+   space_count = 0;
+   endofchar = false;
    morse_string << ".-"<< "-..."<< "-.-."<< "-.."<< "."<< "..-."<< "--." << "...."<< ".."<< ".---"<< "-.-"<< ".-.."<< "--" <<"-."<< "---" <<".--."<< "--.-"<< ".-."<< "..." <<"-"<< "..-"<< "...-"<< ".--"<< "-..-"<< "-.--"<< "--.."<< ".----"<< "..---"<< "...--"<< "....-"<< "....."<< "-...."<< "--..."<< "---.."<< "----." << "-----" << " " ;
    char_string  <<"A"<< "B"<< "C"<< "D"<< "E"<< "F"<< "G"<< "H"<< "I"<< "J"<< "K"<< "L"<< "M"<< "N"<< "O"<< "P"<< "Q"<< "R"<< "S"<< "T"<< "U"<< "V"<< "W"<< "X"<< "Y"<< "Z"<< "1"<< "2"<< "3"<< "4"<< "5"<< "6"<< "7"<< "8"<< "9" << "0" << " " ;
    epromData.clear();
    epromData.fill(0x00,EPROM_SIZE);
-
-   readFile("/home/simon/keyer.bin");
-
 }
 
 void MainWindow::update(void){
+    tmp = morse_char ="";
+    space_count = 0;
+    endofchar = false;
+
     displayBinData();
     processBinaryData();
 }
@@ -45,9 +50,9 @@ void MainWindow::doUpdate(void){
 epromData.clear();
 epromData.fill((unsigned char)0x00,EPROM_SIZE);
 QByteArray temp;
-temp = this->encodeString(ui->channel1_output->toPlainText().trimmed(),0x03);
+temp = this->encodeString(ui->channel1_output->toPlainText().trimmed());
 insertBinaryData(temp,0x03);
-temp = this->encodeString(ui->channel2_output->toPlainText().trimmed(),0x0c);
+temp = this->encodeString(ui->channel2_output->toPlainText().trimmed());
 insertBinaryData(temp,0x0c);
 
 displayBinData(&epromData);
@@ -81,11 +86,7 @@ QString MainWindow::getChar(QString morse_char){
 
 QString  MainWindow::decodeByte(unsigned char byte, unsigned char bit)
 {
-    static QString tmp;
-    static QString morse_char;
-    static int space_count;
     QString morse_packet="";
-    static bool endofchar = false;
 
         if (byte & bit){
             endofchar=false;
@@ -152,6 +153,7 @@ void MainWindow::processBinaryData(){
 void MainWindow::openFile()
 {
    qDebug() << "Load";
+   setup();
    fileName = QFileDialog::getOpenFileName(this,"Select Keyer Binary file",QDir::homePath());
    if (fileName.isEmpty()) return;
    readFile(fileName);
@@ -174,8 +176,7 @@ void MainWindow::saveFile(void)
 
 void MainWindow::readFile(QString fileName)
 {
-
-        QFile file(fileName);
+     QFile file(fileName);
         if (!file.open(QIODevice::ReadOnly)) {
             QMessageBox::information(this, tr("Unable to open file"),
                 file.errorString());
@@ -216,7 +217,7 @@ void MainWindow::displayBinData()
 
 
 /* Converts alphanumeric char to morse encoded string */
-QByteArray MainWindow::encodeString(QString input, unsigned char bits){
+QByteArray MainWindow::encodeString(QString input){
 QString morse_char,temp;
 QString encoded_morse;
 QByteArray output;
@@ -234,7 +235,7 @@ for (int len=0; len < input.length();len++)
         qDebug() << "Unknown char" << input.at(len);
     }
 
-    encoded_morse = encodeMorse(morse_char,bits);
+    encoded_morse = encodeMorse(morse_char);
 
     for (int len= 0 ; len < encoded_morse.length();len++)
     {
@@ -249,7 +250,7 @@ return output;
 }
 
 /* converts morse encoded string to hex encoded string */
-QString MainWindow::encodeMorse(QString c, unsigned char bits ){
+QString MainWindow::encodeMorse(QString c){
     QString tmp_char="";
     int x = 0;
     while (x < c.length())

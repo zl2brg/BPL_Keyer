@@ -36,16 +36,15 @@ private:
     void setup();
     void insertBinaryData(QByteArray temp,unsigned char channel);
 
-    QString encodeMorse(QString c, unsigned char bits);
+    QString encodeMorse(QString c);
 
     QString decodeByte(unsigned char byte, unsigned char bits);
-    QByteArray encodeString(QString c,unsigned char bits);
+    QByteArray encodeString(QString c);
     void processBinaryData();
     QString getChar(QString morse_char);
     QString fileName;
     Ui::MainWindow *ui;
     QByteArray epromData;
-    QByteArray out_binaryData;
 
     QStringList morse_string;
     QStringList char_string;
@@ -53,6 +52,11 @@ private:
     QString morse_msg_ch1;
     QString morse_msg_ch2;
     unsigned char bits=0;
+    QString tmp;
+    QString morse_char;
+    int space_count;
+    bool endofchar;
+
 
 };
 
